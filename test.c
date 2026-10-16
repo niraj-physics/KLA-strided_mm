@@ -6,11 +6,13 @@
  * Height of Matrix : 1024
  * Weidth of Matrix : 1024
  * No of Channels   : 16
+ * block_size       : 128
  */
 
-#define H 1024
-#define W 1024
-#define N 16
+#define H 8
+#define W 8
+#define N 2
+#define block_size 2
 
 /*
  * function save_data
@@ -46,12 +48,12 @@ void read_data(int *data[N]) {
 /*
  * TODO Mention Comments
  */
-void print_data(int *data[N]) {
+void print_data(int *data[N], int height, int width) {
         // print for debugging
         for (int i = 0; i < N; ++i) {
-                for (int j = 0; j < H * W; ++j) {
+                for (int j = 0; j < height * width; ++j) {
                         printf("%2d", data[i][j]);
-                        if ((j + 1) % W == 0)
+                        if ((j + 1) % width == 0)
                                 printf("\n");
                 }
                 printf("\n");
@@ -81,8 +83,32 @@ int main() {
         }
 
         save_data(input_data); // input_data saved in input.bin
-        read_data(data); // data stored in input.bin acessed and stored in data
-        print_data(data);
+        read_data(data);       // data stored in input.bin acessed and stored in
+        print_data(data, H, W);
+
+        // Split the matrix into chunk of blocks
+        int origin;
+        int *temp[N];
+        for (int row = 0; row < (H / block_size); ++row) {
+                for (int col = 0; col < (W / block_size); ++col) {
+                        origin = W * block_size * row + col * block_size;
+
+                        for (int channel = 0; channel < N; ++channel) {
+                                temp[channel] = malloc(sizeof(int) *
+                                                       block_size * block_size);
+
+                                for (int i = 0; i < block_size; ++i) {
+                                        for (int j = 0; j < block_size; ++j) {
+                                                temp[channel][i * block_size +
+                                                              j] =
+                                                    data[channel]
+                                                        [i * W + j + origin];
+                                        }
+                                }
+                        }
+                }
+        }
+        print_data(temp, block_size, block_size);
 
         for (int i = 0; i < N; ++i) {
                 free(input_data[i]);
