@@ -9,8 +9,8 @@ help:
 	@echo "make              build sequential"
 	@echo "make clean        remove build files and input.bin"
 
-main: main.o helper.o
-	$(CC) $(CFLAGS) -o $@ main.o helper.o
+main: main.o helper.o cpu_compute.o
+	$(CC) $(CFLAGS) -o $@ main.o helper.o cpu_compute.o
 
 %.o: %.c config.h
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -7,7 +7,7 @@ void save_data(int *data[N])
 {
 	FILE *f1 = fopen("input.bin", "wb");
 	for (int i = 0; i < N; ++i)
-		fwrite(data[i], sizeof(int), matrix_size * matrix_size, f1);
+		fwrite(data[i], sizeof(int), MATRIX_SIZE * MATRIX_SIZE, f1);
 	fclose(f1);
 }
 
@@ -15,7 +15,7 @@ void read_data(int *data[N])
 {
 	FILE *f2 = fopen("input.bin", "rb");
 	for (int i = 0; i < N; ++i) {
-		fread(data[i], sizeof(data[i][0]), matrix_size * matrix_size, f2);
+		fread(data[i], sizeof(data[i][0]), MATRIX_SIZE * MATRIX_SIZE, f2);
 	};
 	fclose(f2);
 }
@@ -38,27 +38,7 @@ void fill_random(int *data[N])
 {
 	srand(1);
 	for (int i = 0; i < N; ++i) {
-		for (int j = 0; j < matrix_size * matrix_size; ++j)
+		for (int j = 0; j < MATRIX_SIZE * MATRIX_SIZE; ++j)
 			data[i][j] = rand() % 10;
-	}
-}
-
-void generate_input()
-{
-	int *input_data[N];
-
-	/* prepare matrix */
-	for (int i = 0; i < N; ++i) {
-		input_data[i] = malloc(matrix_size * matrix_size * sizeof(int));
-	}
-
-	/* fill random integers only for */
-	fill_random(input_data);
-
-	save_data(input_data);
-	// print_input_data(input_data, matrix_size, matrix_size);
-
-	for (int i = 0; i < N; ++i) {
-		free(input_data[i]);
 	}
 }
