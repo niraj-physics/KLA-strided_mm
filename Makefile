@@ -1,29 +1,21 @@
-CC = gcc
+CC     = gcc
 CFLAGS = -Wall -Wextra -O2
 
-.PHONY: clean help all test_run
+.PHONY: all clean help
 
-all : generate_input sequential
+all: main
 
-help :
-	@echo "make 				build both programs"
-	@echo "make clean			remove build Files"
-	@echo "make test_run			runs sequentially on CPU"
+help:
+	@echo "make              build sequential"
+	@echo "make clean        remove build files and input.bin"
 
-input.bin : generate_input
-	./generate_input > /dev/null
+main: main.o helper.o
+	$(CC) $(CFLAGS) -o $@ main.o helper.o
 
-generate_input: config.h generate_input.c
-	$(CC) $(CFLAGS) -o generate_input generate_input.c
+%.o: %.c config.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
 
-sequential : sequential.c config.h 
-	$(CC) $(CFLAGS) -o sequential sequential.c
-
-clean :
+clean:
 	@echo "Cleaning build files"
-	command rm -f *.o sequential generate_input input.bin
-
-#run on cpu  
-test_run : sequential input.bin
-	./sequential
+	rm -f *.o main 

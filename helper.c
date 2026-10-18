@@ -3,15 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// function save_data
-//
-// saves the data to input.bin file in the following format
-// C0 [ single matrix corresponding to C0 flattened to row ]
-// C1 [ ...................................................]
-// .				  .
-// .				  .
-// .				  .
-// C15 [...................................................]
 void save_data(int *data[N])
 {
 	FILE *f1 = fopen("input.bin", "wb");
@@ -20,8 +11,16 @@ void save_data(int *data[N])
 	fclose(f1);
 }
 
-// TODO Mention Comments
-void print_data(int *data[N], int height, int width)
+void read_data(int *data[N])
+{
+	FILE *f2 = fopen("input.bin", "rb");
+	for (int i = 0; i < N; ++i) {
+		fread(data[i], sizeof(data[i][0]), matrix_size * matrix_size, f2);
+	};
+	fclose(f2);
+}
+
+void print_input_data(int *data[N], int height, int width)
 {
 	// print for debugging
 	for (int i = 0; i < N; ++i) {
@@ -35,7 +34,6 @@ void print_data(int *data[N], int height, int width)
 	}
 }
 
-// TODO Mention comments
 void fill_random(int *data[N])
 {
 	srand(1);
@@ -45,7 +43,7 @@ void fill_random(int *data[N])
 	}
 }
 
-int main()
+void generate_input()
 {
 	int *input_data[N];
 
@@ -58,7 +56,7 @@ int main()
 	fill_random(input_data);
 
 	save_data(input_data);
-	print_data(input_data, matrix_size, matrix_size);
+	// print_input_data(input_data, matrix_size, matrix_size);
 
 	for (int i = 0; i < N; ++i) {
 		free(input_data[i]);
