@@ -10,7 +10,7 @@
 #define E (BLOCK_SIZE * BLOCK_SIZE)
 
 // Split the matrix into chunk of blocks
-#define NBC MATRIX_SIZE / BLOCK_SIZE
+#define NBC (MATRIX_SIZE / BLOCK_SIZE)
 #define NBLK (NBC * NBC)
 
 void save_data(int *data);

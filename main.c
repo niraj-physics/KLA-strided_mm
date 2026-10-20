@@ -9,6 +9,7 @@ int main()
 
 	fill_random(input_data);
 
+	save_data(input_data);
 	// verifications purpose
 	print_input_data(input_data);
 
