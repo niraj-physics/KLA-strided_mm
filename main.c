@@ -5,21 +5,17 @@
 
 int main()
 {
-	// create input and save it in input_data.bin
-	int *input_data[N];
-	for (int i = 0; i < N; ++i) {
-		input_data[i] = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(int));
-	}
+	int *input_data = malloc(sizeof(int) * N * MATRIX_SIZE * MATRIX_SIZE);
 
 	fill_random(input_data);
 
 	// verifications purpose
-	print_input_data(input_data, MATRIX_SIZE, MATRIX_SIZE);
+	print_input_data(input_data);
 
 	int (*split_output)[N][E] = malloc(sizeof(int) * NBLK * N * E);
-
+	//
 	printf("--- Split the Matrix into Chunk of Blocks at each Channels ---\n");
-
+	//
 	cpu_split_matrix(input_data, split_output);
 
 	for (int b = 0; b < NBLK; ++b)
@@ -29,7 +25,7 @@ int main()
 				printf(" %2d", split_output[b][c][k]);
 			printf("\n");
 		}
-
+	//
 	// compute transpose
 	printf("--- Computing the Transpose at  Blocks locations ---\n");
 	double (*output)[N][N] = malloc(sizeof(double) * NBLK * N * N);
@@ -45,10 +41,7 @@ int main()
 		printf("\n");
 	}
 
-	free(split_output);
+	free(input_data);
 	free(output);
-
-	for (int i = 0; i < N; ++i) {
-		free(input_data[i]);
-	}
+	free(split_output);
 }

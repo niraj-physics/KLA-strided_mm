@@ -1,7 +1,7 @@
 #include "config.h"
 #include <stddef.h>
 
-void cpu_split_matrix(int *data[N], int (*output)[N][E])
+void cpu_split_matrix(int *data, int (*output)[N][E])
 {
 	for (int row = 0; row < NBC; ++row) {
 		for (int col = 0; col < NBC; ++col) {
@@ -12,7 +12,8 @@ void cpu_split_matrix(int *data[N], int (*output)[N][E])
 				for (int i = 0; i < BLOCK_SIZE; ++i) {
 					for (int j = 0; j < BLOCK_SIZE; ++j) {
 						output[blk][channel][i * BLOCK_SIZE + j] =
-						    data[channel][origin + i * MATRIX_SIZE + j];
+						    data[channel * MATRIX_SIZE * MATRIX_SIZE +
+							 origin + i * MATRIX_SIZE + j];
 					}
 				}
 			}

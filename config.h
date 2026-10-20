@@ -13,14 +13,14 @@
 #define NBC MATRIX_SIZE / BLOCK_SIZE
 #define NBLK (NBC * NBC)
 
-void save_data(int *data[N]);
+void save_data(int *data);
 
-void print_input_data(int *data[N], int height, int width);
+void print_input_data(int *data);
 
-void fill_random(int *data[N]);
+void fill_random(int *data);
 
-void read_data(int *data[N]);
+void read_data(int *data);
 
-void cpu_split_matrix(int *data[N], int (*output)[N][E]);
+void cpu_split_matrix(int *data, int (*output)[N][E]);
 
 void cpu_compute(int (*data)[N][E], double (*output)[N][N]);
