@@ -37,7 +37,7 @@ Run the CPU version first, then the GPU version:
 ./main_gpu        # GPU version; its output should match the CPU output
 ```
 
-| Target  | What it does                                                         |
+| Target  |                                                          |
 |---------|----------------------------------------------------------------------|
 | `all`   | Builds `main` and `main_gpu` (default)                               |
 | `cpu`   | Builds `main` from `main.o` and `helper.o` (gcc)                     |
@@ -63,7 +63,7 @@ make gpu ARCH=sm_75
 
 - [x] Naive CPU version to understand the problem statement
 - [x] Tiled GPU kernel (`main.cu`)
-- [ ] Verify GPU output against the CPU output
+- [X] Verify GPU output against the CPU output
 - [ ] Change input data type from `int` to `int16`
 - [ ] Improve Performance and Optimize
 - [ ] CuBLAS implementations 
