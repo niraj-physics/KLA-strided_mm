@@ -4,23 +4,14 @@
 // No of Channels   : 16
 // block_size	    : 128
 
-#define MATRIX_SIZE 8
-#define N 2
-#define BLOCK_SIZE 2
+#define MATRIX_SIZE 1024
+#define N 16
+#define BLOCK_SIZE 128
 #define E (BLOCK_SIZE * BLOCK_SIZE)
+
+#define TILE_SIZE 32
+#define TILES (E / TILE_SIZE)
 
 // Split the matrix into chunk of blocks
 #define NBC (MATRIX_SIZE / BLOCK_SIZE)
 #define NBLK (NBC * NBC)
-
-void save_data(int *data);
-
-void print_input_data(int *data);
-
-void fill_random(int *data);
-
-void read_data(int *data);
-
-void cpu_split_matrix(int *data, int (*output)[N][E]);
-
-void cpu_compute(int (*data)[N][E], double (*output)[N][N]);
