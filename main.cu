@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// version_1 kernel
+// Kernel version : v0
 __global__ void gpu_compute_tiled(int *data, double (*output)[N][N])
 {
 	int row = blockIdx.x;
@@ -13,7 +13,6 @@ __global__ void gpu_compute_tiled(int *data, double (*output)[N][N])
 	__shared__ int temp1[N][TILE_SIZE];
 
 	int origin = MATRIX_SIZE * BLOCK_SIZE * row + col * BLOCK_SIZE;
-	int blk = row * NBC + col; // block id
 
 	int i = threadIdx.x;
 	int j = threadIdx.y;
@@ -22,23 +21,13 @@ __global__ void gpu_compute_tiled(int *data, double (*output)[N][N])
 	temp1[i][j] = data[i * MATRIX_SIZE * MATRIX_SIZE + origin + (e / BLOCK_SIZE) * MATRIX_SIZE +
 			   (e % BLOCK_SIZE)];
 
-	// for (int channel = 0; channel < N; ++channel) {
-	// 	// temp1[channel][i * BLOCK_SIZE + j] = data[channel][origin + i * MATRIX_SIZE + j];
-	// 	temp1[channel][i * TILE_SIZE + j] =
-	// 	    data[channel * MATRIX_SIZE * MATRIX_SIZE + origin + blk_z * TILE_SIZE +
-	// 		 i * TILE_SIZE + j];
-	// }
 	__syncthreads();
 
-	if (j < N) {
-		double sum = 0;
-		for (int k = 0; k < TILE_SIZE; ++k)
-			sum += (double)temp1[i][k] * temp1[j][k];
-		atomicAdd(&output[blk][i][j], sum);
-	}
-
-	// output[blk][i][j] += sum;
-	// output[blk][j][i] += sum;
+	int blk = row * NBC + col; // block id
+	double sum = 0;
+	for (int k = 0; k < TILE_SIZE; ++k)
+		sum += (double)temp1[i][k] * temp1[j][k];
+	atomicAdd(&output[blk][i][j], sum);
 }
 
 int main()
@@ -60,15 +49,8 @@ int main()
 	cudaMalloc(&g_output, sizeof(double) * NBLK * N * N);
 
 	cudaMemset(g_output, 0, sizeof(double) * NBLK * N * N);
-	// // configure kernnels -- gpu compute
-	// dim3 block(BLOCK_SIZE, BLOCK_SIZE, 1);
-	// dim3 grid(NBC, NBC, 1);
-	//
-	// gpu_compute<<<grid, block>>>(g_data, g_output);
-	//
-	// // kernel calls
 
-	// gpu compute tiled
+	// gpu compute tiled _v1
 	dim3 grid(NBC, NBC, TILES);
 	dim3 block(N, TILE_SIZE);
 	gpu_compute_tiled<<<grid, block>>>(g_data, g_output);

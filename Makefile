@@ -19,7 +19,7 @@ help:
 	@echo "make              build CPU (main) and GPU (main_gpu) versions"
 	@echo "make cpu          build CPU version only"
 	@echo "make gpu          build GPU version only (needs nvcc)"
-	@echo "make gpu ARCH=sm_80   build GPU version for a different architecture"
+	@echo "make gpu ARCH=sm_75   build GPU version for a different architecture"
 	@echo "make clean        remove object files and binaries"
 
 # CPU version (main.c + helper.c)

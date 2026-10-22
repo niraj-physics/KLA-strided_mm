@@ -9,7 +9,7 @@
 #define BLOCK_SIZE 128
 #define E (BLOCK_SIZE * BLOCK_SIZE)
 
-#define TILE_SIZE 32
+#define TILE_SIZE 16
 #define TILES (E / TILE_SIZE)
 
 // Split the matrix into chunk of blocks
