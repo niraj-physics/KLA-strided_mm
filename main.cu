@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// version_1 kernel
 __global__ void gpu_compute_tiled(int *data, double (*output)[N][N])
 {
 	int row = blockIdx.x;
