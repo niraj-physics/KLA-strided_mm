@@ -15,3 +15,7 @@
 // Split the matrix into chunk of blocks
 #define NBC (MATRIX_SIZE / BLOCK_SIZE)
 #define NBLK (NBC * NBC)
+
+// for kernel - v2
+#define SPLIT 16		      // CHG: CTAs per output block along the reduction
+#define TILES_PER_CTA (TILES / SPLIT) // CHG: 64 tiles per CTA

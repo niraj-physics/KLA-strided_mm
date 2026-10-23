@@ -74,6 +74,37 @@ __global__ void gpu_compute_tiled_v1(int *data, double (*output)[N][N])
 	output[blk][i][j] = sum;
 }
 
+__global__ void gpu_compute_tiled_v2(int *data, double (*output)[N][N])
+{
+	int row = blockIdx.x;
+	int col = blockIdx.y;
+
+	__shared__ int temp1[N][TILE_SIZE + 1]; // CHG: +1 padding (bank conflicts)
+
+	int origin = MATRIX_SIZE * BLOCK_SIZE * row + col * BLOCK_SIZE;
+
+	// changed i and j for coalesced acess , now reads 16 consecutive e
+	int i = threadIdx.y;
+	int j = threadIdx.x;
+
+	long long sum = 0;
+	for (int z = blockIdx.z * TILES_PER_CTA; // slice of the tiles
+	     z < (blockIdx.z + 1) * TILES_PER_CTA; ++z) {
+		int e = z * TILE_SIZE + j; // e becomes consecutive now with i and j interchanged
+		temp1[i][j] = data[i * MATRIX_SIZE * MATRIX_SIZE + origin +
+				   (e / BLOCK_SIZE) * MATRIX_SIZE + (e % BLOCK_SIZE)];
+
+		__syncthreads();
+
+		for (int k = 0; k < TILE_SIZE; ++k)
+			sum += (long long)temp1[i][k] * temp1[j][k];
+		__syncthreads();
+	}
+
+	int blk = row * NBC + col;
+	atomicAdd(&output[blk][i][j], (double)sum); // CHG: one atomic per CTA
+}
+
 int main()
 {
 	int *h_data, *g_data;
@@ -100,10 +131,15 @@ int main()
 	// dim3 block(N, TILE_SIZE);
 	// gpu_compute_tiled_v0<<<grid, block>>>(g_data, g_output);
 
-	// kernel config v1 ------------ without Atomic ADD
-	dim3 grid(NBC, NBC);
-	dim3 block(N, TILE_SIZE);
-	gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
+	// // kernel config v1 ------------ without Atomic ADD
+	// dim3 grid(NBC, NBC);
+	// dim3 block(N, TILE_SIZE);
+	// gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
+	//
+	// kernel config v2 --------
+	dim3 grid(NBC, NBC, SPLIT); // 8 x 8 x 16 = 1024 CTAs
+	dim3 block(N, TILE_SIZE);   // 16 x 16, same as v1
+	gpu_compute_tiled_v2<<<grid, block>>>(g_data, g_output);
 
 	cudaMemcpy(h_output, g_output, sizeof(double) * NBLK * N * N, cudaMemcpyDeviceToHost);
 
