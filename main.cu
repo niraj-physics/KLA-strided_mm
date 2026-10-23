@@ -5,7 +5,11 @@
 #include <stdlib.h>
 
 // Kernel version : v0
-__global__ void gpu_compute_tiled(int *data, double (*output)[N][N])
+// gpu compute tiled _v0 -- Kernel Config
+// dim3 grid(NBC, NBC, TILES);
+// dim3 block(N, TILE_SIZE);
+// gpu_compute_tiled<<<grid, block>>>(g_data, g_output);
+__global__ void gpu_compute_tiled_v0(int *data, double (*output)[N][N])
 {
 	int row = blockIdx.x;
 	int col = blockIdx.y;
@@ -30,6 +34,46 @@ __global__ void gpu_compute_tiled(int *data, double (*output)[N][N])
 	atomicAdd(&output[blk][i][j], sum);
 }
 
+// Kernel version : v1
+// Atempt : try to avoid atomicAdd with for loops
+// Kernel config
+// dim3 grid(NBC, NBC);
+// dim3 block(N, TILE_SIZE);
+// gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
+__global__ void gpu_compute_tiled_v1(int *data, double (*output)[N][N])
+{
+	// dim3 grid(NBC, NBC);
+	// dim3 block(N, TILE_SIZE);
+	// gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
+
+	int row = blockIdx.x;
+	int col = blockIdx.y;
+
+	__shared__ int temp1[N][TILE_SIZE];
+
+	int origin = MATRIX_SIZE * BLOCK_SIZE * row + col * BLOCK_SIZE;
+
+	int i = threadIdx.x;
+	int j = threadIdx.y;
+
+	double sum = 0;
+	for (int z = 0; z < TILES; ++z) {
+		// int e = blockIdx.z * TILE_SIZE + j;
+		int e = z * TILE_SIZE + j;
+		temp1[i][j] = data[i * MATRIX_SIZE * MATRIX_SIZE + origin +
+				   (e / BLOCK_SIZE) * MATRIX_SIZE + (e % BLOCK_SIZE)];
+
+		__syncthreads(); // ensure tile is fully loaded before computations for specific z
+
+		for (int k = 0; k < TILE_SIZE; ++k)
+			sum += (double)temp1[i][k] * temp1[j][k];
+		__syncthreads();
+	}
+
+	int blk = row * NBC + col; // block id
+	output[blk][i][j] = sum;
+}
+
 int main()
 {
 	int *h_data, *g_data;
@@ -50,10 +94,16 @@ int main()
 
 	cudaMemset(g_output, 0, sizeof(double) * NBLK * N * N);
 
-	// gpu compute tiled _v1
-	dim3 grid(NBC, NBC, TILES);
+	//-   Kernel config v0------
+	// // gpu compute tiled _v0
+	// dim3 grid(NBC, NBC, TILES);
+	// dim3 block(N, TILE_SIZE);
+	// gpu_compute_tiled_v0<<<grid, block>>>(g_data, g_output);
+
+	// kernel config v1 ------------ without Atomic ADD
+	dim3 grid(NBC, NBC);
 	dim3 block(N, TILE_SIZE);
-	gpu_compute_tiled<<<grid, block>>>(g_data, g_output);
+	gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
 
 	cudaMemcpy(h_output, g_output, sizeof(double) * NBLK * N * N, cudaMemcpyDeviceToHost);
 
