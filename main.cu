@@ -23,26 +23,25 @@ __global__ void gpu_compute_tiled_v3(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE],
 
 	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
 
-	// uncoalesced
-	// for (int t = j; t < CHUNK_SIZE; t += 16) {
-	// 	temp1[i][t] = data[i][base + t];
-	// }
-
 	// coalesced load of the [16][512] tile
 	int tid = j * blockDim.x + i;		// 0..255
 	int nthreads = blockDim.x * blockDim.y; // 256
-	for (int idx = tid; idx < N * CHUNK_SIZE; idx += nthreads) {
-		int r = idx / CHUNK_SIZE;
-		int c = idx % CHUNK_SIZE;
-		temp1[r][c] = data[r][base + c];
+
+	int total_counter = CHUNK_SIZE / nthreads;
+	for (int counter = 0; counter < total_counter; ++counter) {
+		int col = tid + nthreads * counter;
+		for (int ii = 0; ii < N; ++ii) {
+			temp1[ii][col] = data[ii][base + col];
+		}
 	}
+
 	__syncthreads();
 
 	double sum = 0;
 	for (int k = 0; k < CHUNK_SIZE; ++k)
-		sum += (double)((int)temp1[i][k] * (int)temp1[j][k]);
+		sum += ((int)temp1[i][k] * (int)temp1[j][k]);
 
-	atomicAdd(&output[blockIdx.x][i][j], sum);
+	atomicAdd(&output[blockIdx.x][i][j], (double)sum);
 }
 
 int main()
