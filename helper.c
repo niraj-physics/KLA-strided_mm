@@ -1,25 +1,27 @@
+#include "helper.h"
 #include "config.h"
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void save_data(int (*data)[MATRIX_SIZE * MATRIX_SIZE])
+void save_data(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE])
 {
 	FILE *f1 = fopen("input.bin", "wb");
 	for (int i = 0; i < N; ++i)
-		fwrite(data[i], sizeof(int), MATRIX_SIZE * MATRIX_SIZE, f1);
+		fwrite(data[i], sizeof(int16_t), MATRIX_SIZE * MATRIX_SIZE, f1);
 	fclose(f1);
 }
 
-void read_data(int (*data)[MATRIX_SIZE * MATRIX_SIZE])
+void read_data(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE])
 {
 	FILE *f2 = fopen("input.bin", "rb");
 	for (int i = 0; i < N; ++i)
-		fread(data[i], sizeof(int), MATRIX_SIZE * MATRIX_SIZE, f2);
+		fread(data[i], sizeof(int16_t), MATRIX_SIZE * MATRIX_SIZE, f2);
 	fclose(f2);
-};
+}
 
-void print_input_data(int (*data)[MATRIX_SIZE * MATRIX_SIZE])
+void print_input_data(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE])
 {
 	for (int i = 0; i < N; ++i) {
 		printf("channel : %d \n", i);
@@ -30,7 +32,7 @@ void print_input_data(int (*data)[MATRIX_SIZE * MATRIX_SIZE])
 	}
 }
 
-void fill_random(int (*data)[MATRIX_SIZE * MATRIX_SIZE])
+void fill_random(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE])
 {
 	srand(1);
 	for (int i = 0; i < N; ++i) {

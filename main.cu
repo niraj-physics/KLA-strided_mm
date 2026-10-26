@@ -1,157 +1,79 @@
 #include "config.h"
 #include "helper.h"
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
+#include <cuda_fp16.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// Kernel version : v0
-// gpu compute tiled _v0 -- Kernel Config
-// dim3 grid(NBC, NBC, TILES);
-// dim3 block(N, TILE_SIZE);
-// gpu_compute_tiled<<<grid, block>>>(g_data, g_output);
-__global__ void gpu_compute_tiled_v0(int *data, double (*output)[N][N])
+#define CHUNK_SIZE 512
+#define CHUNKS (BLOCK_SIZE * BLOCK_SIZE / CHUNK_SIZE)
+
+__global__ void gpu_compute_tiled_v3(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE],
+				     double (*output)[N][N])
 {
-	int row = blockIdx.x;
-	int col = blockIdx.y;
 
-	__shared__ int temp1[N][TILE_SIZE];
-
-	int origin = MATRIX_SIZE * BLOCK_SIZE * row + col * BLOCK_SIZE;
+	// bank confilict fix
+	__shared__ int16_t temp1[16][CHUNK_SIZE + 2];
 
 	int i = threadIdx.x;
 	int j = threadIdx.y;
 
-	int e = blockIdx.z * TILE_SIZE + j;
-	temp1[i][j] = data[i * MATRIX_SIZE * MATRIX_SIZE + origin + (e / BLOCK_SIZE) * MATRIX_SIZE +
-			   (e % BLOCK_SIZE)];
+	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
 
+	// uncoalesced
+	// for (int t = j; t < CHUNK_SIZE; t += 16) {
+	// 	temp1[i][t] = data[i][base + t];
+	// }
+
+	// coalesced load of the [16][512] tile
+	int tid = j * blockDim.x + i;		// 0..255
+	int nthreads = blockDim.x * blockDim.y; // 256
+	for (int idx = tid; idx < N * CHUNK_SIZE; idx += nthreads) {
+		int r = idx / CHUNK_SIZE;
+		int c = idx % CHUNK_SIZE;
+		temp1[r][c] = data[r][base + c];
+	}
 	__syncthreads();
 
-	int blk = row * NBC + col; // block id
 	double sum = 0;
-	for (int k = 0; k < TILE_SIZE; ++k)
-		sum += (double)temp1[i][k] * temp1[j][k];
-	atomicAdd(&output[blk][i][j], sum);
-}
+	for (int k = 0; k < CHUNK_SIZE; ++k)
+		sum += (double)((int)temp1[i][k] * (int)temp1[j][k]);
 
-// Kernel version : v1
-// Atempt : try to avoid atomicAdd with for loops
-// Kernel config
-// dim3 grid(NBC, NBC);
-// dim3 block(N, TILE_SIZE);
-// gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
-__global__ void gpu_compute_tiled_v1(int *data, double (*output)[N][N])
-{
-	// dim3 grid(NBC, NBC);
-	// dim3 block(N, TILE_SIZE);
-	// gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
-
-	int row = blockIdx.x;
-	int col = blockIdx.y;
-
-	__shared__ int temp1[N][TILE_SIZE];
-
-	int origin = MATRIX_SIZE * BLOCK_SIZE * row + col * BLOCK_SIZE;
-
-	int i = threadIdx.x;
-	int j = threadIdx.y;
-
-	double sum = 0;
-	for (int z = 0; z < TILES; ++z) {
-		// int e = blockIdx.z * TILE_SIZE + j;
-		int e = z * TILE_SIZE + j;
-		temp1[i][j] = data[i * MATRIX_SIZE * MATRIX_SIZE + origin +
-				   (e / BLOCK_SIZE) * MATRIX_SIZE + (e % BLOCK_SIZE)];
-
-		__syncthreads(); // ensure tile is fully loaded before computations for specific z
-
-		for (int k = 0; k < TILE_SIZE; ++k)
-			sum += (double)temp1[i][k] * temp1[j][k];
-		__syncthreads();
-	}
-
-	int blk = row * NBC + col; // block id
-	output[blk][i][j] = sum;
-}
-
-__global__ void gpu_compute_tiled_v2(int *data, double (*output)[N][N])
-{
-	int row = blockIdx.x;
-	int col = blockIdx.y;
-
-	__shared__ int temp1[N][TILE_SIZE + 1]; // CHG: +1 padding (bank conflicts)
-
-	int origin = MATRIX_SIZE * BLOCK_SIZE * row + col * BLOCK_SIZE;
-
-	// changed i and j for coalesced acess , now reads 16 consecutive e
-	int i = threadIdx.y;
-	int j = threadIdx.x;
-
-	long long sum = 0;
-	for (int z = blockIdx.z * TILES_PER_CTA; // slice of the tiles
-	     z < (blockIdx.z + 1) * TILES_PER_CTA; ++z) {
-		int e = z * TILE_SIZE + j; // e becomes consecutive now with i and j interchanged
-		temp1[i][j] = data[i * MATRIX_SIZE * MATRIX_SIZE + origin +
-				   (e / BLOCK_SIZE) * MATRIX_SIZE + (e % BLOCK_SIZE)];
-
-		__syncthreads();
-
-		for (int k = 0; k < TILE_SIZE; ++k)
-			sum += (long long)temp1[i][k] * temp1[j][k];
-		__syncthreads();
-	}
-
-	int blk = row * NBC + col;
-	atomicAdd(&output[blk][i][j], (double)sum); // CHG: one atomic per CTA
+	atomicAdd(&output[blockIdx.x][i][j], sum);
 }
 
 int main()
 {
-	// int *h_data, *g_data;
-	size_t inbytes = sizeof(int) * N * MATRIX_SIZE * MATRIX_SIZE;
-	int (*h_data)[MATRIX_SIZE][MATRIX_SIZE];
-	int (*g_data)[MATRIX_SIZE][MATRIX_SIZE];
+	size_t inbytes = sizeof(int16_t) * N * MATRIX_SIZE * MATRIX_SIZE;
+	size_t outbytes = sizeof(double) * NBLK * N * N;
 
-	h_data = (int (*)[MATRIX_SIZE][MATRIX_SIZE])malloc(inbytes);
-
+	int16_t (*h_data)[MATRIX_SIZE * MATRIX_SIZE];
+	int16_t (*g_data)[MATRIX_SIZE * MATRIX_SIZE];
+	h_data = (int16_t (*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
 	cudaMalloc(&g_data, inbytes);
 
-	// TODO change
+	double (*h_output)[N][N];
+	double (*g_output)[N][N];
+	h_output = (double (*)[N][N])malloc(outbytes);
+	cudaMalloc(&g_output, outbytes);
+	cudaMemset(g_output, 0, outbytes); // TODO check this memset
+
+	// assumes input.bin is available
 	read_data(h_data);
-	cudaMemcpy(g_data, h_data, sizeof(int) * N * MATRIX_SIZE * MATRIX_SIZE,
-		   cudaMemcpyHostToDevice);
+	cudaMemcpy(g_data, h_data, inbytes, cudaMemcpyHostToDevice);
+	print_input_data(h_data); // for testing correctness
 
-	// print input data to match with the cpu refernce generated by main
-	print_input_data(h_data);
-	// TODO
+	// Kernel config
+	dim3 grid(NBLK, CHUNKS);
+	dim3 block(N, N); // 256 threads per block
+	gpu_compute_tiled_v3<<<grid, block>>>(g_data, g_output);
 
-	double (*h_output)[N][N], (*g_output)[N][N];
-	h_output = (double (*)[N][N])malloc(sizeof(double) * NBLK * N * N);
-	cudaMalloc(&g_output, sizeof(double) * NBLK * N * N);
+	cudaMemcpy(h_output, g_output, outbytes, cudaMemcpyDeviceToHost);
 
-	cudaMemset(g_output, 0, sizeof(double) * NBLK * N * N);
-
-	//-   Kernel config v0------
-	// // gpu compute tiled _v0
-	// dim3 grid(NBC, NBC, TILES);
-	// dim3 block(N, TILE_SIZE);
-	// gpu_compute_tiled_v0<<<grid, block>>>(g_data, g_output);
-
-	// // kernel config v1 ------------ without Atomic ADD
-	// dim3 grid(NBC, NBC);
-	// dim3 block(N, TILE_SIZE);
-	// gpu_compute_tiled_v1<<<grid, block>>>(g_data, g_output);
-	//
-	// kernel config v2 --------
-	dim3 grid(NBC, NBC, SPLIT); // 8 x 8 x 16 = 1024 CTAs
-	dim3 block(N, TILE_SIZE);   // 16 x 16, same as v1
-	gpu_compute_tiled_v2<<<grid, block>>>(g_data, g_output);
-
-	cudaMemcpy(h_output, g_output, sizeof(double) * NBLK * N * N, cudaMemcpyDeviceToHost);
-
-	// print outputs : should match with the output generated by  main
+	// print output
 	for (int b = 0; b < NBLK; ++b) {
 		printf("block %3d", b);
 		for (int i = 0; i < N; ++i) {
@@ -161,8 +83,8 @@ int main()
 		printf("\n");
 	}
 
-	// deallocate memmory
 	free(h_data);
+	free(h_output);
 	cudaFree(g_data);
 	cudaFree(g_output);
 }

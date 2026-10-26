@@ -1,10 +1,11 @@
 #include "config.h"
 #include "helper.h"
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void cpu_compute_v0(int (*data)[MATRIX_SIZE * MATRIX_SIZE], double (*output)[N][N])
+void cpu_compute_v0(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE], double (*output)[N][N])
 {
 	// CPU implementations with out using split funcitons
 	for (int b = 0; b < NBLK; ++b) {
@@ -26,13 +27,18 @@ void cpu_compute_v0(int (*data)[MATRIX_SIZE * MATRIX_SIZE], double (*output)[N][
 int main()
 {
 	// int *h_data, *g_data;
-	size_t inbytes = sizeof(int) * N * MATRIX_SIZE * MATRIX_SIZE;
-	int (*data)[MATRIX_SIZE * MATRIX_SIZE];
+	size_t inbytes = sizeof(int16_t) * N * MATRIX_SIZE * MATRIX_SIZE;
+	int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE];
 
-	data = (int (*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
+	data = (int16_t (*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
+
+	// run this code to generate new input.bin
 	fill_random(data);
-
 	save_data(data);
+
+	// assumes input.bin is available
+	read_data(data);
+
 	print_input_data(data);
 	double (*output)[N][N] = malloc(sizeof(double) * NBLK * N * N);
 
