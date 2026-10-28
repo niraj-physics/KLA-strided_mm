@@ -1,44 +1,38 @@
-CC      = gcc
-NVCC    = nvcc
-CFLAGS  = -Wall -Wextra -O2
+# Build for the fp16 (__half) -> float channel-correlation project.
+# Every source file contains __half / cuda_fp16.h, so everything is built with nvcc.
+#
+#   main.cu      -> GPU version  (binary: main_gpu)
+#   main_cpu.cu  -> CPU reference (binary: main_cpu)
+#   helper.cu    -> shared helpers (input file I/O, printing, random fill)
 
-# GPU architecture. double atomicAdd needs sm_60 or newer.
-# Override on the command line, e.g.  make gpu ARCH=sm_80
+NVCC    = nvcc
+
+# GPU architecture. Override on the command line, e.g.  make ARCH=sm_80
 ARCH    = sm_75
-NVFLAGS = -O2 -arch=$(ARCH)
+NVFLAGS = -O2 -arch=$(ARCH) -Xcompiler -Wall,-Wextra
 
 .PHONY: all cpu gpu clean help
 
 all: cpu gpu
-
-cpu: main
-
+cpu: main_cpu
 gpu: main_gpu
 
 help:
-	@echo "make              build CPU (main) and GPU (main_gpu) versions"
-	@echo "make cpu          build CPU version only"
-	@echo "make gpu          build GPU version only (needs nvcc)"
-	@echo "make gpu ARCH=sm_75   build GPU version for a different architecture"
-	@echo "make clean        remove object files and binaries"
+	@echo "make                  build CPU reference (main_cpu) and GPU (main_gpu)"
+	@echo "make cpu              build main_cpu only"
+	@echo "make gpu              build main_gpu only"
+	@echo "make ARCH=sm_80       build for a different GPU architecture"
+	@echo "make clean            remove object files and binaries"
 
-# CPU version (main.c + helper.c)
-main: main.o helper.o
-	$(CC) $(CFLAGS) -o $@ main.o helper.o
+main_cpu: main_cpu.o helper.o
+	$(NVCC) $(NVFLAGS) -o $@ $^
 
-# GPU version (main.cu + helper.c)
-main_gpu: main_gpu.o helper.o
-	$(NVCC) $(NVFLAGS) -o $@ main_gpu.o helper.o
+main_gpu: main.o helper.o
+	$(NVCC) $(NVFLAGS) -o $@ $^
 
-main.o: main.c config.h helper.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-helper.o: helper.c config.h helper.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
-main_gpu.o: main.cu config.h helper.h
+%.o: %.cu config.h helper.cuh
 	$(NVCC) $(NVFLAGS) -c $< -o $@
 
 clean:
 	@echo "Cleaning build files"
-	rm -f *.o main main_gpu
+	rm -f *.o main_cpu main_gpu input.bin

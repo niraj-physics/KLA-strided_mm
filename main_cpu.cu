@@ -1,11 +1,12 @@
 #include "config.h"
-#include "helper.h"
+#include "helper.cuh"
+#include <cuda_fp16.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void cpu_compute_v0(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE], double (*output)[N][N])
+void cpu_compute_v0(__half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*output)[N][N])
 {
 	// CPU implementations with out using split funcitons
 	for (int b = 0; b < NBLK; ++b) {
@@ -15,8 +16,10 @@ void cpu_compute_v0(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE], double (*output)
 				// elements
 				double sum = 0.0f;
 				for (int e = 0; e < BLOCK_SIZE * BLOCK_SIZE; ++e) {
-					sum += data[bi][b * BLOCK_SIZE * BLOCK_SIZE + e] *
-					       data[bj][b * BLOCK_SIZE * BLOCK_SIZE + e];
+					sum +=
+					    __half2float(
+						data[bi][b * BLOCK_SIZE * BLOCK_SIZE + e]) *
+					    __half2float(data[bj][b * BLOCK_SIZE * BLOCK_SIZE + e]);
 				}
 				output[b][bi][bj] = sum;
 			}
@@ -27,10 +30,10 @@ void cpu_compute_v0(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE], double (*output)
 int main()
 {
 	// int *h_data, *g_data;
-	size_t inbytes = sizeof(int16_t) * N * MATRIX_SIZE * MATRIX_SIZE;
-	int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE];
+	size_t inbytes = sizeof(__half) * N * MATRIX_SIZE * MATRIX_SIZE;
+	__half(*data)[MATRIX_SIZE * MATRIX_SIZE];
 
-	data = (int16_t (*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
+	data = (__half(*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
 
 	// run this code to generate new input.bin
 	fill_random(data);
@@ -40,7 +43,7 @@ int main()
 	read_data(data);
 
 	print_input_data(data);
-	double (*output)[N][N] = malloc(sizeof(double) * NBLK * N * N);
+	float (*output)[N][N] = (float (*)[N][N])malloc(sizeof(float) * NBLK * N * N);
 
 	cpu_compute_v0(data, output);
 

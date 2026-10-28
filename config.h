@@ -3,7 +3,9 @@
 // Weidth of Matrix : 1024
 // No of Channels   : 16
 // block_size	    : 128
-
+#ifndef CONFIG_H
+#define CONFIG_H
+// ... existing defines ...
 #define MATRIX_SIZE 1024
 #define N 16
 #define BLOCK_SIZE 128
@@ -19,3 +21,4 @@
 // for kernel - v2
 #define SPLIT 16		      // CHG: CTAs per output block along the reduction
 #define TILES_PER_CTA (TILES / SPLIT) // CHG: 64 tiles per CTA
+#endif

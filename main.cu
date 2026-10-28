@@ -1,7 +1,6 @@
 #include "config.h"
-#include "helper.h"
+#include "helper.cuh"
 #include <cstddef>
-#include <cstdint>
 #include <cstdlib>
 #include <cuda_fp16.h>
 #include <stddef.h>
@@ -11,12 +10,12 @@
 #define CHUNK_SIZE 512
 #define CHUNKS (BLOCK_SIZE * BLOCK_SIZE / CHUNK_SIZE)
 
-__global__ void gpu_compute_tiled_v3(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE],
-				     double (*output)[N][N])
+__global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
+				     float (*output)[N][N])
 {
 
 	// bank confilict fix
-	__shared__ int16_t temp1[16][CHUNK_SIZE + 2];
+	__shared__ __half temp1[16][CHUNK_SIZE + 2];
 
 	int i = threadIdx.x;
 	int j = threadIdx.y;
@@ -37,26 +36,26 @@ __global__ void gpu_compute_tiled_v3(int16_t (*data)[MATRIX_SIZE * MATRIX_SIZE],
 
 	__syncthreads();
 
-	double sum = 0;
+	float sum = 0;
 	for (int k = 0; k < CHUNK_SIZE; ++k)
-		sum += ((int)temp1[i][k] * (int)temp1[j][k]);
+		sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
 
-	atomicAdd(&output[blockIdx.x][i][j], (double)sum);
+	atomicAdd(&output[blockIdx.x][i][j], (float)sum);
 }
 
 int main()
 {
-	size_t inbytes = sizeof(int16_t) * N * MATRIX_SIZE * MATRIX_SIZE;
-	size_t outbytes = sizeof(double) * NBLK * N * N;
+	size_t inbytes = sizeof(__half) * N * MATRIX_SIZE * MATRIX_SIZE;
+	size_t outbytes = sizeof(float) * NBLK * N * N;
 
-	int16_t (*h_data)[MATRIX_SIZE * MATRIX_SIZE];
-	int16_t (*g_data)[MATRIX_SIZE * MATRIX_SIZE];
-	h_data = (int16_t (*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
+	__half(*h_data)[MATRIX_SIZE * MATRIX_SIZE];
+	__half(*g_data)[MATRIX_SIZE * MATRIX_SIZE];
+	h_data = (__half(*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
 	cudaMalloc(&g_data, inbytes);
 
-	double (*h_output)[N][N];
-	double (*g_output)[N][N];
-	h_output = (double (*)[N][N])malloc(outbytes);
+	float (*h_output)[N][N];
+	float (*g_output)[N][N];
+	h_output = (float (*)[N][N])malloc(outbytes);
 	cudaMalloc(&g_output, outbytes);
 	cudaMemset(g_output, 0, outbytes); // TODO check this memset
 
