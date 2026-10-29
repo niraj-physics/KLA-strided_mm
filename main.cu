@@ -13,36 +13,75 @@
 __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
 				     float (*output)[N][N])
 {
-
-	// bank confilict fix
 	__shared__ __half temp1[16][CHUNK_SIZE + 2];
-
-	int i = threadIdx.x;
-	int j = threadIdx.y;
 
 	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
 
-	// coalesced load of the [16][512] tile
-	int tid = j * blockDim.x + i;		// 0..255
-	int nthreads = blockDim.x * blockDim.y; // 256
-
-	int total_counter = CHUNK_SIZE / nthreads;
-	for (int counter = 0; counter < total_counter; ++counter) {
+	// fill
+	int tid = threadIdx.y * blockDim.x + threadIdx.x;
+	int nthreads = blockDim.x * blockDim.y;
+	for (int counter = 0; counter < CHUNK_SIZE / nthreads; ++counter) {
 		int col = tid + nthreads * counter;
-		for (int ii = 0; ii < N; ++ii) {
+		for (int ii = 0; ii < N; ++ii)
 			temp1[ii][col] = data[ii][base + col];
-		}
 	}
-
 	__syncthreads();
 
-	float sum = 0;
-	for (int k = 0; k < CHUNK_SIZE; ++k)
-		sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
+	//  each thread owns a 2x2 patch of the output
+	int i = threadIdx.x * 2;
+	int j = threadIdx.y * 2;
 
-	// memmory colalescing fix  interchange i <-> j
-	atomicAdd(&output[blockIdx.x][j][i], (float)sum);
+	float s00 = 0.f, s01 = 0.f, s10 = 0.f, s11 = 0.f;
+	for (int k = 0; k < CHUNK_SIZE; ++k) {
+		float a0 = __half2float(temp1[i][k]); // 4 loads ...
+		float a1 = __half2float(temp1[i + 1][k]);
+		float b0 = __half2float(temp1[j][k]);
+		float b1 = __half2float(temp1[j + 1][k]);
+		s00 += a0 * b0; // ... feed 4 FMAs
+		s01 += a0 * b1;
+		s10 += a1 * b0;
+		s11 += a1 * b1;
+	}
+
+	atomicAdd(&output[blockIdx.x][i][j], s00);
+	atomicAdd(&output[blockIdx.x][i][j + 1], s01);
+	atomicAdd(&output[blockIdx.x][i + 1][j], s10);
+	atomicAdd(&output[blockIdx.x][i + 1][j + 1], s11);
 }
+
+// __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
+// 				     float (*output)[N][N])
+// {
+//
+// 	// bank confilict fix
+// 	__shared__ __half temp1[16][CHUNK_SIZE + 2];
+//
+// 	int i = threadIdx.x;
+// 	int j = threadIdx.y;
+//
+// 	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
+//
+// 	// coalesced load of the [16][512] tile
+// 	int tid = j * blockDim.x + i;		// 0..255
+// 	int nthreads = blockDim.x * blockDim.y; // 256
+//
+// 	int total_counter = CHUNK_SIZE / nthreads;
+// 	for (int counter = 0; counter < total_counter; ++counter) {
+// 		int col = tid + nthreads * counter;
+// 		for (int ii = 0; ii < N; ++ii) {
+// 			temp1[ii][col] = data[ii][base + col];
+// 		}
+// 	}
+//
+// 	__syncthreads();
+//
+// 	float sum = 0;
+// 	for (int k = 0; k < CHUNK_SIZE; ++k)
+// 		sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
+//
+// 	// memmory colalescing fix  interchange i <-> j
+// 	atomicAdd(&output[blockIdx.x][j][i], (float)sum);
+// }
 
 int main()
 {
@@ -67,7 +106,8 @@ int main()
 
 	// Kernel config
 	dim3 grid(NBLK, CHUNKS);
-	dim3 block(N, N); // 256 threads per block
+	// dim3 block(N, N); // 256 threads per block
+	dim3 block(N / 2, N / 2); // 64 threads per block
 	gpu_compute_tiled_v3<<<grid, block>>>(g_data, g_output);
 
 	cudaMemcpy(h_output, g_output, outbytes, cudaMemcpyDeviceToHost);
