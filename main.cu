@@ -40,7 +40,8 @@ __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
 	for (int k = 0; k < CHUNK_SIZE; ++k)
 		sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
 
-	atomicAdd(&output[blockIdx.x][i][j], (float)sum);
+	// memmory colalescing fix  interchange i <-> j
+	atomicAdd(&output[blockIdx.x][j][i], (float)sum);
 }
 
 int main()

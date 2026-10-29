@@ -4,5 +4,6 @@
 2. v1_0 : kernel version v1 , initial report -- Loops 
 3. v2_0 : kernel version v2 , initial report -- Atomic Update + Loops + padding (for bank conflict)
 4. v3_int16 : kernel version v3 (input : int16_t output : double)  
-5. v3_fp16 : kernel version  v3 (input : fp16 , output: float)
+5. v3_fp16_01 : kernel version  v3 (input : fp16 , output: float)
+5. v3_fp16_02 : kernel version  v3 (input : fp16 , output: float) -- Memmory Coalescing fix at atomic add
 
