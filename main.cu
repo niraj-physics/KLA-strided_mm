@@ -7,13 +7,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define CHUNK_SIZE 512
+// #define CHUNK_SIZE 512
+#define CHUNK_SIZE 256 // slightly fast but mio throttle
 #define CHUNKS (BLOCK_SIZE * BLOCK_SIZE / CHUNK_SIZE)
 
 __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
 				     float (*output)[N][N])
 {
-	__shared__ __half temp1[16][CHUNK_SIZE + 2];
+	__shared__ __half temp1[16][CHUNK_SIZE + 4]; // incrased from 2 to 4
 
 	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
 

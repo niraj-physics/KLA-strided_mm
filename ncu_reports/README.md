@@ -7,3 +7,4 @@
 5. v3_fp16_01 : kernel version  v3 (input : fp16 , output: float)
 5. v3_fp16_02 : kernel version  v3 (input : fp16 , output: float) -- Memmory Coalescing fix at atomic add
 6. v3_fp16_03 : kernel version v3 -- Register tiling 
+7. v3_fp16_03_bank_conflict : +2 to +4 padding at shared memmory 
