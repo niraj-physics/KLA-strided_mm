@@ -8,41 +8,75 @@
 #include <stdlib.h>
 
 #define CHUNK_SIZE 512
+#define TILE 256 // columns loaded per iteration (= number of threads in block)
 #define CHUNKS (BLOCK_SIZE * BLOCK_SIZE / CHUNK_SIZE)
 
 __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
 				     float (*output)[N][N])
 {
-
-	// bank confilict fix
-	__shared__ __half temp1[16][CHUNK_SIZE + 2];
+	// smaller shared buffer: only one TILE at a time
+	__shared__ __half temp1[16][TILE + 2];
 
 	int i = threadIdx.x;
 	int j = threadIdx.y;
+	int tid = j * blockDim.x + i; // 0..255
 
 	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
 
-	// coalesced load of the [16][512] tile
-	int tid = j * blockDim.x + i;		// 0..255
-	int nthreads = blockDim.x * blockDim.y; // 256
+	float sum = 0;
 
-	int total_counter = CHUNK_SIZE / nthreads;
-	for (int counter = 0; counter < total_counter; ++counter) {
-		int col = tid + nthreads * counter;
-		for (int ii = 0; ii < N; ++ii) {
-			temp1[ii][col] = data[ii][base + col];
-		}
+	for (int t = 0; t < CHUNK_SIZE; t += TILE) {
+		// load one tile (each thread loads one column)
+		for (int ii = 0; ii < N; ++ii)
+			temp1[ii][tid] = data[ii][base + t + tid];
+
+		__syncthreads(); // tile is ready
+
+		// compute on this tile
+		for (int k = 0; k < TILE; ++k)
+			sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
+
+		__syncthreads(); // everyone done before the tile is overwritten
 	}
 
-	__syncthreads();
-
-	float sum = 0;
-	for (int k = 0; k < CHUNK_SIZE; ++k)
-		sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
-
-	// memmory colalescing fix  interchange i <-> j
-	atomicAdd(&output[blockIdx.x][j][i], (float)sum);
+	atomicAdd(&output[blockIdx.x][j][i], sum);
 }
+// #define CHUNK_SIZE 512
+// #define CHUNKS (BLOCK_SIZE * BLOCK_SIZE / CHUNK_SIZE)
+//
+// __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
+// 				     float (*output)[N][N])
+// {
+//
+// 	// bank confilict fix
+// 	__shared__ __half temp1[16][CHUNK_SIZE + 2];
+//
+// 	int i = threadIdx.x;
+// 	int j = threadIdx.y;
+//
+// 	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
+//
+// 	// coalesced load of the [16][512] tile
+// 	int tid = j * blockDim.x + i;		// 0..255
+// 	int nthreads = blockDim.x * blockDim.y; // 256
+//
+// 	int total_counter = CHUNK_SIZE / nthreads;
+// 	for (int counter = 0; counter < total_counter; ++counter) {
+// 		int col = tid + nthreads * counter;
+// 		for (int ii = 0; ii < N; ++ii) {
+// 			temp1[ii][col] = data[ii][base + col];
+// 		}
+// 	}
+//
+// 	__syncthreads();
+//
+// 	float sum = 0;
+// 	for (int k = 0; k < CHUNK_SIZE; ++k)
+// 		sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
+//
+// 	// memmory colalescing fix  interchange i <-> j
+// 	atomicAdd(&output[blockIdx.x][j][i], (float)sum);
+// }
 
 int main()
 {
