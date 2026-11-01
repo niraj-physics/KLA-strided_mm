@@ -28,7 +28,7 @@ main_cpu: main_cpu.o helper.o
 	$(NVCC) $(NVFLAGS) -o $@ $^
 
 main_gpu: main.o helper.o
-	$(NVCC) $(NVFLAGS) -o $@ $^
+	$(NVCC) $(NVFLAGS) -o $@ $^ -lcublas
 
 %.o: %.cu config.h helper.cuh
 	$(NVCC) $(NVFLAGS) -c $< -o $@

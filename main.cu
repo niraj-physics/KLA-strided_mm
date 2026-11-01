@@ -2,6 +2,7 @@
 #include "helper.cuh"
 #include <cstddef>
 #include <cstdlib>
+#include <cublas_v2.h>
 #include <cuda_fp16.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -50,39 +51,23 @@ __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
 	atomicAdd(&output[blockIdx.x][i + 1][j + 1], s11);
 }
 
-// __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
-// 				     float (*output)[N][N])
-// {
-//
-// 	// bank confilict fix
-// 	__shared__ __half temp1[16][CHUNK_SIZE + 2];
-//
-// 	int i = threadIdx.x;
-// 	int j = threadIdx.y;
-//
-// 	int base = blockIdx.x * BLOCK_SIZE * BLOCK_SIZE + blockIdx.y * CHUNK_SIZE;
-//
-// 	// coalesced load of the [16][512] tile
-// 	int tid = j * blockDim.x + i;		// 0..255
-// 	int nthreads = blockDim.x * blockDim.y; // 256
-//
-// 	int total_counter = CHUNK_SIZE / nthreads;
-// 	for (int counter = 0; counter < total_counter; ++counter) {
-// 		int col = tid + nthreads * counter;
-// 		for (int ii = 0; ii < N; ++ii) {
-// 			temp1[ii][col] = data[ii][base + col];
-// 		}
-// 	}
-//
-// 	__syncthreads();
-//
-// 	float sum = 0;
-// 	for (int k = 0; k < CHUNK_SIZE; ++k)
-// 		sum += __half2float(temp1[i][k]) * __half2float(temp1[j][k]);
-//
-// 	// memmory colalescing fix  interchange i <-> j
-// 	atomicAdd(&output[blockIdx.x][j][i], (float)sum);
-// }
+/*
+ * TODO Write comments
+ */
+cublasStatus_t compute_cublas(cublasHandle_t cublasH, __half (*data)[MATRIX_SIZE * MATRIX_SIZE],
+			      float (*output)[N][N])
+{
+	const float alpha = 1.0f, beta = 0.0f;
+	int ld = MATRIX_SIZE * MATRIX_SIZE;
+	int K = BLOCK_SIZE * BLOCK_SIZE;
+
+	cublasStatus_t status = cublasGemmStridedBatchedEx(
+	    cublasH, CUBLAS_OP_T, CUBLAS_OP_N, N, N, K, &alpha, data, CUDA_R_16F, ld, K, data,
+	    CUDA_R_16F, ld, K, &beta, output, CUDA_R_32F, N, N * N, NBLK, CUBLAS_COMPUTE_32F,
+	    CUBLAS_GEMM_DEFAULT);
+
+	return status;
+}
 
 int main()
 {
@@ -105,11 +90,22 @@ int main()
 	cudaMemcpy(g_data, h_data, inbytes, cudaMemcpyHostToDevice);
 	print_input_data(h_data); // for testing correctness
 
-	// Kernel config
-	dim3 grid(NBLK, CHUNKS);
-	// dim3 block(N, N); // 256 threads per block
-	dim3 block(N / 2, N / 2); // 64 threads per block
-	gpu_compute_tiled_v3<<<grid, block>>>(g_data, g_output);
+	/*
+	 // Kernel config
+	 dim3 grid(NBLK, CHUNKS);
+	 // dim3 block(N, N); // 256 threads per block
+	 dim3 block(N / 2, N / 2); // 64 threads per block
+	 gpu_compute_tiled_v3<<<grid, block>>>(g_data, g_output);
+	*/
+
+	cublasHandle_t cublasH = NULL;
+	cublasCreate_v2(&cublasH);
+
+	cublasStatus_t status = compute_cublas(cublasH, g_data, g_output);
+	if (status != CUBLAS_STATUS_SUCCESS)
+		printf("Error");
+
+	cublasDestroy(cublasH);
 
 	cudaMemcpy(h_output, g_output, outbytes, cudaMemcpyDeviceToHost);
 
