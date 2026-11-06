@@ -6,9 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// compute_cpu_v0 function
+// parameter : __half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*output)[N][N])
 void cpu_compute_v0(__half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*output)[N][N])
 {
-	// CPU implementations with out using split funcitons
 	for (int b = 0; b < NBLK; ++b) {
 		// particular block
 		for (int bi = 0; bi < N; ++bi) {
@@ -27,15 +28,20 @@ void cpu_compute_v0(__half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*output)[N
 	}
 }
 
+// The main function
+// allocates space for input data
+// calls fill_random (helper.cu) : which fills the data with random integer
+// calls save_data (helper.cu)  : which creates input.bin file
+// prints the input data -- for correctness check
+// calls cpu_compute_v0 : to compute
+// prints the output data -- for correctness check
 int main()
 {
-	// int *h_data, *g_data;
 	size_t inbytes = sizeof(__half) * N * MATRIX_SIZE * MATRIX_SIZE;
 	__half(*data)[MATRIX_SIZE * MATRIX_SIZE];
 
 	data = (__half(*)[MATRIX_SIZE * MATRIX_SIZE]) malloc(inbytes);
 
-	// run this code to generate new input.bin
 	fill_random(data);
 	save_data(data);
 

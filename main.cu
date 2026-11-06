@@ -56,9 +56,10 @@ __global__ void gpu_compute_tiled_v3(__half (*data)[MATRIX_SIZE * MATRIX_SIZE],
 	atomicAdd(&output[blockIdx.x][i + 1][j + 1], s11);
 }
 
-/*
- * TODO Write comments
- */
+//
+// compute_cublas function
+// parameter : __half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*output)[N][N]
+// uses cublasGemmStridedBatchedEx function to compute
 cublasStatus_t compute_cublas(cublasHandle_t cublasH, __half (*data)[MATRIX_SIZE * MATRIX_SIZE],
 			      float (*output)[N][N])
 {
@@ -74,10 +75,8 @@ cublasStatus_t compute_cublas(cublasHandle_t cublasH, __half (*data)[MATRIX_SIZE
 	return status;
 }
 
-/*
- * MMA Kernel
- */
-
+// mma_kernel :  utilizes Tensor Core
+// parameter : __half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*output)[N][N]
 using namespace nvcuda;
 
 __global__ void wmma_kernel(__half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*output)[N][N])
@@ -114,6 +113,11 @@ __global__ void wmma_kernel(__half (*data)[MATRIX_SIZE * MATRIX_SIZE], float (*o
 		atomicAdd(&output[blockIdx.x][e / N][e % N], tile[e / N][e % N]);
 }
 
+// Depending on the parameter passed with ./main_gpu , it uses the
+// corresponding functions to compute , three options are valid
+// 1. custom : calls gpu_compute_tiled_v3
+// 2. cublas : calls compute_cublas
+// 3. mma    : calls wmma_kernel
 int main(int argc, char *argv[])
 {
 	size_t inbytes = sizeof(__half) * N * MATRIX_SIZE * MATRIX_SIZE;
@@ -134,13 +138,6 @@ int main(int argc, char *argv[])
 	read_data(h_data);
 	cudaMemcpy(g_data, h_data, inbytes, cudaMemcpyHostToDevice);
 
-	/*
-	 * Depending on the parameter passed with ./main_gpu , it uses the
-	 * corresponding functions to compute , three options are valid
-	 * 1. custom : calls gpu_compute_tiled_v3
-	 * 2. cublas : calls compute_cublas
-	 * 3. mma    : calls wmma_kernel
-	 */
 	if (argc < 2) {
 		printf("usage: %s -- custom|cublas|mma\n", argv[0]);
 		return 1;
