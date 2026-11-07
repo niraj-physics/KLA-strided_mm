@@ -38,10 +38,7 @@ cmp cpu.txt custom.txt && echo "custom OK"
 cmp cpu.txt mma.txt    && echo "mma OK"
 ```
 
-## Profiling Reports at ncu_reports/
-1. ncu_reports/cublas_most_recent.ncu-rep
-2. ncu_reports/mma_most_recent.ncu-rep
-3. ncu_reports/custom_most_recent.ncu-rep
+## Profiling Reports [here](https://github.com/niraj-physics/KLA-strided_mm/blob/main/ncu_reports/README.md)
 
 ## Details 
 ### Architecture
