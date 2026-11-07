@@ -1,5 +1,14 @@
 # Strided Batch Matrix Multiplications
-TODO
+Given an input matrix of dimensions H = 1024 x W = 1024 with 16 channels of FP16
+ the objective is to divide the matrix into 128x128 disjoint blocks (16384
+elements) spatially along the height and width. This results in a total of 64 blocks per
+channel. Subsequently, each block from the 16 channels will undergo matrix multiplication
+with its transpose to produce the final covariance matrix, as shown in the diagram.
+
+using 
+1. Custom Written Kernel
+2. using CuBLAS
+3. using Tensor Core
 
 ## Build and run
 
