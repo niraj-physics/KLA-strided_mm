@@ -12,10 +12,12 @@
 
 ## Overall Analysis
 Compute (SM) Throughput [%]	62.79
-Memory Throughput [%]	111.31
-Memmory Bound 
 
-41% of FP32 peak performance
+Memory Throughput [%]	111.31
+
+> Memmory Bound 
+
+**41% of FP32 peak performance**
 
 # CUBLAS Kernel 
 > cublasGemmAlgo_t : CUBLAS_GEMM_DEFAULT_TENSOR_OP
@@ -32,10 +34,12 @@ Memmory Bound
 
 ## Overall Analysis
 Compute (SM) Throughput [%]	69.78
-Memory Throughput [%]	36.45
-Compute Bound
 
-69.72% of  FP32 peak performance
+Memory Throughput [%]	36.45
+
+> Compute Bound
+
+**69.72% of  FP32 peak performance**
 
 # Tensor Core (MMA  Kernel)
 
@@ -52,10 +56,12 @@ Compute Bound
 
 ## Overall Analysis
 Compute (SM) Throughput [%]	27.74
+
 Memory Throughput [%]	98.73
+
 Memmory Bound 
 
-achieved 5.19% FP32 peak performance
+**achieved 5.19% FP32 peak performance**
 
 # Summary
 TODO include durations, % of FP32 Peak performance , and compute/memmory bound
