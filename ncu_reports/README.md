@@ -1,10 +1,61 @@
+#. custom Kernel 
 
-# ncu reports file
-1. v0_0 : kernel version v0 , initial report -- Atomic Update
-2. v1_0 : kernel version v1 , initial report -- Loops 
-3. v2_0 : kernel version v2 , initial report -- Atomic Update + Loops + padding (for bank conflict)
-4. v3_int16 : kernel version v3 (input : int16_t output : double)  
-5. v3_fp16_01 : kernel version  v3 (input : fp16 , output: float)
-5. v3_fp16_02 : kernel version  v3 (input : fp16 , output: float) -- Memmory Coalescing fix at atomic add
-6. v3_fp16_03 : kernel version v3 -- Register tiling 
-7. v3_fp16_03_bank_conflict : +2 to +4 padding at shared memmory 
+## Duration [us]
+226.82
+
+## Roofline Analysis
+| Memory Level | Arithmetic Intensity (FLOP/byte) | Performance (FLOP/s) |
+|---|---:|---:|
+| L1  | 8.00 | 2,366,988,713,318.28 |
+| L2 | 15.96 | 2,366,988,713,318.28 |
+| DRAM | 9.32 | 2,366,988,713,318.28 |
+
+## Overall Analysis
+Compute (SM) Throughput [%]	62.79
+Memory Throughput [%]	111.31
+Memmory Bound 
+
+41% of FP32 peak performance
+
+# CUBLAS Kernel 
+> cublasGemmAlgo_t : CUBLAS_GEMM_DEFAULT_TENSOR_OP
+
+## Duration [us]
+757.18
+
+##  Roofline Analysis
+| Memory Level | Arithmetic Intensity (OP/byte) | Performance (OP/s) |
+|---|---:|---:|
+| L1 | 63.68 | 45,378,320,682,951.57 |
+| L2 | 1,016.72 | 45,378,320,682,951.57 |
+| DRAM | 660.67 | 45,378,320,682,951.57 |
+
+## Overall Analysis
+Compute (SM) Throughput [%]	69.78
+Memory Throughput [%]	36.45
+Compute Bound
+
+69.72% of  FP32 peak performance
+
+# Tensor Core (MMA  Kernel)
+
+## Duration [us]
+171.65
+
+## Roofline Analysis 
+| Memory Level | Arithmetic Intensity (OP/byte) | Performance (OP/s) |
+|---|---:|---:|
+| L1 | 8.00 | 3,127,743,475,018.64 |
+| L2 | 15.96 | 3,127,743,475,018.64 |
+| DRAM | 10.61 | 3,127,743,475,018.64 |
+
+
+## Overall Analysis
+Compute (SM) Throughput [%]	27.74
+Memory Throughput [%]	98.73
+Memmory Bound 
+
+achieved 5.19% FP32 peak performance
+
+# Summary
+TODO include durations, % of FP32 Peak performance , and compute/memmory bound
