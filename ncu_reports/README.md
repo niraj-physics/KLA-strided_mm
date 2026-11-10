@@ -66,8 +66,8 @@ Memmory Bound
 
 **achieved 5.19% FP32 peak performance**
 
-# Summary
-TODO include durations, % of FP32 Peak performance , and compute/memmory bound
+
+
 # Summary
 
 | Kernel | Duration [us] | % of FP32 Peak | Bound |
@@ -77,3 +77,34 @@ TODO include durations, % of FP32 Peak performance , and compute/memmory bound
 | Tensor Core (MMA) | 171.65 | 5.19% | Memory bound |
 
 The tensor core kernel is the fastest at 171.65 us, about 1.3x faster than the custom kernel. Both are limited by memory throughput (111.31% and 98.73% respectively), so neither reaches its compute ceiling. The cuBLAS kernel is compute bound, with the highest SM throughput (69.78%) and only 36.45% memory throughput.
+
+# Peak Throughput
+## Architecture specs used (Tesla T4, Turing TU104, sm_75)
+
+
+| Parameter | Value | Source |
+|---|---|---|
+| SMs | 40 | ncu report (Launch Statistics: "# SMs") |
+| FP32 CUDA cores per SM | 64 | Turing architecture spec |
+| FLOP per FMA | 2 (multiply + add) | Standard convention |
+| Tensor Cores per SM | 8 (320 total) | Turing architecture spec |
+| Tensor Core FP16 throughput | 64 FMA/clk per core = 128 FLOP/clk | Turing architecture spec |
+| Boost clock (spec) | 1.59 GHz | T4 datasheet; repo README |
+| Published FP32 peak | 8.1 TFLOP/s | T4 datasheet |
+| Published FP16 tensor peak | 65 TFLOP/s | T4 datasheet |
+
+[Refrence](https://www.itcreations.com/nvidia-gpu/nvidia-tesla-t4-gpu#specifications)
+
+## Formulas
+
+- FP32 peak = SMs × 64 × 2 × SM clock = 5,120 FLOP/clk × SM clock
+- FP16 tensor peak = SMs × 8 × 128 × SM clock = 40,960 FLOP/clk × SM clock
+
+## Peak throughput per report
+
+| Report | SM clock | FP32 peak | FP16 tensor peak |
+|---|---|---|---|
+| custom | 1.09 GHz | 5.58 TFLOP/s | 44.6 TFLOP/s |
+| mma | 1.00 GHz | 5.12 TFLOP/s | 41.0 TFLOP/s |
+| cuBLAS | 1.59 GHz | 8.14 TFLOP/s | 65.1 TFLOP/s |
+| spec (boost) | 1.59 GHz | 8.14 TFLOP/s | 65.1 TFLOP/s |
