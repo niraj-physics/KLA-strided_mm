@@ -5,6 +5,7 @@ elements) spatially along the height and width. This results in a total of 64 bl
 channel. Subsequently, each block from the 16 channels will undergo matrix multiplication
 with its transpose to produce the final covariance matrix, as shown in the diagram.
 
+![image](./image.png)
 using 
 1. Custom Written Kernel
 2. using CuBLAS
