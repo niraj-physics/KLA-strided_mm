@@ -11,6 +11,39 @@ using
 2. using CuBLAS
 3. using Tensor Core
 
+## To test the correctness of CPU Refrence 
+> demo.cu file , for verifications of algorithm , same problem is scaled to
+ smaller size , Matrix size : 1024 * 1024 -> 8 * 8 , Block Size : 128 * 128 -> 2 * 2 , 
+ Number of channels : 16 -> 2
+
+> Expected output : 16 symmetric matrix with size 2 * 2 
+```sh
+nvcc demo.cu
+./a.out
+```
+```
+channel : 0 
+  3  6  7  5  3  5  6  2  9  1  2  7  0  9  3  6  0  6  2  6  1  8  7  9  2  0  2  3  7  5  9  2  2  8  9  7  3  6  1  2  9  3  1  9  4  7  8  4  5  0  3  6  1  0  6  3  2  0  6  1  5  5  4  7
+channel : 1 
+  6  5  6  9  3  7  4  5  2  5  4  7  4  4  3  0  7  8  6  8  8  4  3  1  4  9  2  0  6  8  9  2  6  6  4  9  5  0  4  8  7  1  7  2  7  2  2  6  1  0  6  1  5  9  4  9  0  9  1  7  7  1  1  5
+block   0    119    135    135    178
+block   1     74     78     78     99
+block   2    135     80     80     94
+block   3    126     45     45     41
+block   4     76    108    108    213
+block   5    195     70     70     90
+block   6     17     12     12    101
+block   7    159    167    167    185
+block   8    198    159    159    169
+block   9     50     35     35    105
+block  10    172     91     91    103
+block  11    145     82     82     93
+block  12     70     29     29     38
+block  13     46     56     56    203
+block  14     41     13     13    131
+block  15    115     79     79     76
+```
+
 ## Build and run
 
 ```sh
