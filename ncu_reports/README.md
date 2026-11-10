@@ -69,12 +69,12 @@ Memmory Bound
 
 
 # Summary
+| Kernel | Duration [µs] | Peak used | % of that peak | DRAM throughput | Limiter |
+|---|---:|---|---:|---:|---|
+| Custom | 226.82 | FP32 @1.09 GHz = 5.58 TFLOP/s | 42% | 111% | DRAM saturated (L1/TEX 90%) |
+| cuBLAS | 757.18 | FP16 tensor @1.59 GHz = 65.1 TFLOP/s | 69.7% (1.1% useful) | 21.5% | Tensor pipe busy on padded 128×128 tiles |
+| MMA | 171.65 | FP16 tensor @1.00 GHz = 41.0 TFLOP/s | 7.6% | 98.7% | DRAM saturated |
 
-| Kernel | Duration [us] | % of FP32 Peak | Bound |
-|---|---:|---:|---|
-| Custom | 226.82 | 41% | Memory bound |
-| cuBLAS (`CUBLAS_GEMM_DEFAULT_TENSOR_OP`) | 757.18 | 69.72% | Compute bound |
-| Tensor Core (MMA) | 171.65 | 5.19% | Memory bound |
 
 The tensor core kernel is the fastest at 171.65 us, about 1.3x faster than the custom kernel. Both are limited by memory throughput (111.31% and 98.73% respectively), so neither reaches its compute ceiling. The cuBLAS kernel is compute bound, with the highest SM throughput (69.78%) and only 36.45% memory throughput.
 
