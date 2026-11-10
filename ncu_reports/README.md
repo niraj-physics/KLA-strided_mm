@@ -4,6 +4,7 @@
 226.82
 
 ## Roofline Analysis
+[Roofline Plot](./custom_roofline.png)
 | Memory Level | Arithmetic Intensity (FLOP/byte) | Performance (FLOP/s) |
 |---|---:|---:|
 | L1  | 8.00 | 2,366,988,713,318.28 |
@@ -26,6 +27,7 @@ Memory Throughput [%]	111.31
 757.18
 
 ##  Roofline Analysis
+[Roofline Plot](./cublas_roofline.png)
 | Memory Level | Arithmetic Intensity (OP/byte) | Performance (OP/s) |
 |---|---:|---:|
 | L1 | 63.68 | 45,378,320,682,951.57 |
@@ -47,6 +49,7 @@ Memory Throughput [%]	36.45
 171.65
 
 ## Roofline Analysis 
+[Roofline](./tensor_roofline.png)
 | Memory Level | Arithmetic Intensity (OP/byte) | Performance (OP/s) |
 |---|---:|---:|
 | L1 | 8.00 | 3,127,743,475,018.64 |
@@ -65,3 +68,12 @@ Memmory Bound
 
 # Summary
 TODO include durations, % of FP32 Peak performance , and compute/memmory bound
+# Summary
+
+| Kernel | Duration [us] | % of FP32 Peak | Bound |
+|---|---:|---:|---|
+| Custom | 226.82 | 41% | Memory bound |
+| cuBLAS (`CUBLAS_GEMM_DEFAULT_TENSOR_OP`) | 757.18 | 69.72% | Compute bound |
+| Tensor Core (MMA) | 171.65 | 5.19% | Memory bound |
+
+The tensor core kernel is the fastest at 171.65 us, about 1.3x faster than the custom kernel. Both are limited by memory throughput (111.31% and 98.73% respectively), so neither reaches its compute ceiling. The cuBLAS kernel is compute bound, with the highest SM throughput (69.78%) and only 36.45% memory throughput.
