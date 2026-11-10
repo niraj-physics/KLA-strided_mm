@@ -4,7 +4,7 @@
 226.82
 
 ## Roofline Analysis
-[Roofline Plot](./custom_roofline.png)
+![Roofline Plot](./custom_roofline.png)
 | Memory Level | Arithmetic Intensity (FLOP/byte) | Performance (FLOP/s) |
 |---|---:|---:|
 | L1  | 8.00 | 2,366,988,713,318.28 |
@@ -27,7 +27,7 @@ Memory Throughput [%]	111.31
 757.18
 
 ##  Roofline Analysis
-[Roofline Plot](./cublas_roofline.png)
+![Roofline Plot](./cublas_roofline.png)
 | Memory Level | Arithmetic Intensity (OP/byte) | Performance (OP/s) |
 |---|---:|---:|
 | L1 | 63.68 | 45,378,320,682,951.57 |
@@ -49,7 +49,7 @@ Memory Throughput [%]	36.45
 171.65
 
 ## Roofline Analysis 
-[Roofline](./tensor_roofline.png)
+![Roofline](./tensor_roofline.png)
 | Memory Level | Arithmetic Intensity (OP/byte) | Performance (OP/s) |
 |---|---:|---:|
 | L1 | 8.00 | 3,127,743,475,018.64 |
